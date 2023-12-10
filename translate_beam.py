@@ -33,6 +33,9 @@ def get_args():
     # alpha hyperparameter for length normalization (described as lp in https://arxiv.org/pdf/1609.08144.pdf equation 14)
     parser.add_argument('--alpha', default=0.0, type=float, help='alpha for softer length normalization')
 
+    parser.add_argument('--regularizer', default=0.0, type=float, help='regularizer for UID')
+
+
     return parser.parse_args()
 
 
@@ -48,7 +51,7 @@ def main(args):
     # Load dictionaries
     src_dict = Dictionary.load(os.path.join(args.dicts, 'dict.{:s}'.format(args.source_lang)))
     logging.info('Loaded a source dictionary ({:s}) with {:d} words'.format(args.source_lang, len(src_dict)))
-    tgt_dict = Dictionary.load(os.path.join(args.dicts, 'dict.{:s}'.format(args.target_lang)))
+    tgt_dict = Dictionary.load(os.path.join(args.dicts, 'dict.{:s}'.format(args.target_lang)))  
     logging.info('Loaded a target dictionary ({:s}) with {:d} words'.format(args.target_lang, len(tgt_dict)))
 
     # Load dataset
@@ -163,6 +166,9 @@ def main(args):
                     log_p = log_p[-1]
                     next_word = torch.cat((prev_words[i][1:], next_word[-1:]))
 
+                    Lambda = args.regularizer
+                    log_p -= Lambda * ( - log_p )**2
+
                     # Get parent node and beam search object for corresponding sentence
                     node = nodes[i]
                     search = node.search
@@ -191,6 +197,10 @@ def main(args):
             # #import pdb;pdb.set_trace()
             # __QUESTION 5: What happens internally when we prune our beams?
             # How do we know we always maintain the best sequences?
+            # when we prune these beams, each of search object will only keep the best (beam_size - finished_size) nodes, 
+            # and drop all the others.
+            # we use PriorityQueue to store the nodes, and the PriorityQueue will always keep the best nodes in the front (We reversed the 
+            # log probability of each node which means the larger its logp, the smaller its priority and the further ahead a node is ranked).
             for search in searches:
                 search.prune()
 
