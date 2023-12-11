@@ -33,7 +33,7 @@ def get_args():
     # alpha hyperparameter for length normalization (described as lp in https://arxiv.org/pdf/1609.08144.pdf equation 14)
     parser.add_argument('--alpha', default=0.0, type=float, help='alpha for softer length normalization')
 
-    parser.add_argument('--regularizer', default=0.0, type=float, help='regularizer for UID')
+    parser.add_argument('--Lambda', default=0.0, type=float, help='regularizer for UID')
 
 
     return parser.parse_args()
@@ -123,6 +123,7 @@ def main(args):
                 node = BeamSearchNode(searches[i], emb, lstm_out, final_hidden, final_cell,
                                       mask, torch.cat((go_slice[i], next_word)), log_p, 1)
                 # __QUESTION 3: Why do we add the node with a negative score?
+                # The queue for nodes is a min-heap, so we need to invert the score to make it a max-heap. 
                 searches[i].add(-node.eval(args.alpha), node)
 
         #import pdb;pdb.set_trace()
@@ -166,7 +167,7 @@ def main(args):
                     log_p = log_p[-1]
                     next_word = torch.cat((prev_words[i][1:], next_word[-1:]))
 
-                    Lambda = args.regularizer
+                    Lambda = args.Lambda
                     log_p -= Lambda * ( - log_p )**2
 
                     # Get parent node and beam search object for corresponding sentence
